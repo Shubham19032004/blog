@@ -1,7 +1,10 @@
+import Auth from "../components/Auth";
+
 const Signup = () => {
-    return ( <>
-    Signup
-    </> );
+    return ( 
+    <div>
+        <Auth type="signup"/>
+    </div> );
 }
  
 export default Signup;

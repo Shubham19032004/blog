@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
 import { Hono } from "hono";
 import { sign } from "hono/jwt";
-import { SigninInput,signinInput,signupInput } from "@shubham1903/blog";
+import { signinInput,signupInput } from "@shubham1903/blog";
 export const userRouter = new Hono<{
     Bindings: {
       DATABASE_URL: string;
@@ -12,41 +12,50 @@ export const userRouter = new Hono<{
   }>();
 
   userRouter.post("/signup", async (c) => {
-    const prisma = new PrismaClient({
-      datasourceUrl: c.env?.DATABASE_URL,
-    }).$extends(withAccelerate());
-    const body = await c.req.json();
-    const {success}=signupInput.safeParse(body)
-    if(!success){
-      c.status(411)
-      return c.json({
-        message:"Inputs"
-      })
-    }
-    const user = await prisma.user.findUnique({
-      where: {
-        email: body.email,
-      },
-    });
-    if (user) {
-      c.status(400);
-      return c.json({ error: "user alreday exist" });
-    }
+ 
+const prisma = new PrismaClient({
+  datasourceUrl: c.env.DATABASE_URL,
+}).$extends(withAccelerate())
     try {
-      const user = await prisma.user.create({
-        data: {
-          email: body.email,
-          password: body.password,
+      const body = await c.req.json();
+      console.log(body)
+      const {success}=signupInput.safeParse(body)
+      if(!success){
+        c.status(411)
+        return c.json({
+          message:"Inputs"
+        })
+      }
+      const user = await prisma.user.findUnique({
+        where: {
+          email: body.username,
         },
       });
-      const jwt = await sign({ userid: user.id }, c.env.SECRET);
-      return c.json({ jwt });
-    } catch (e) {
-      c.status(403);
-      return c.json({ error: "error while signing up" });
+      console.log("hello")
+      if (user) {
+        c.status(400);
+        return c.json({ error: "user alreday exist" });
+      }
+      try {
+        const user = await prisma.user.create({
+          data: {
+            email: body.username,
+            password: body.password,
+          },
+        });
+        const jwt = await sign({ userid: user.id }, c.env.SECRET);
+        return c.json({ jwt });
+      } catch (e) {
+        c.status(403);
+        return c.json({ error: "error while signing up" });
+      }
+    } catch (error) {
+      c.status(500);
+      return c.json({ error: error });
+      
     }
   });
-  userRouter.post("/user/signin", async (c) => {
+  userRouter.post("/signin", async (c) => {
     try {
       const prisma = new PrismaClient({
         datasourceUrl: c.env?.DATABASE_URL,
@@ -61,7 +70,7 @@ export const userRouter = new Hono<{
       }
       const user = await prisma.user.findUnique({
         where: {
-          email: body.email,
+          email: body.username,
           password: body.password,
         },
       });
